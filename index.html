@@ -1,908 +1,124 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
-
 <title>RoyalScanner</title>
-
 <style>
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    background: #07111f;
-    color: #eef4ff;
-    font-family: Arial, sans-serif;
-}
-
-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid #203047;
-    background: #0a1525;
-}
-
-h1 {
-    margin: 0;
-    font-size: 25px;
-}
-
-.badge {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: #123b2a;
-    color: #65e6a0;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.wrap {
-    max-width: 1100px;
-    margin: auto;
-    padding: 16px;
-}
-
-.controls {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-select,
-button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #30445e;
-    background: #101d2f;
-    color: white;
-    font-weight: bold;
-}
-
-button {
-    background: #f5c44e;
-    color: #111;
-    cursor: pointer;
-    grid-column: span 4;
-}
-
-.status {
-    padding: 10px;
-    border-radius: 8px;
-    background: #101d2f;
-    margin-bottom: 12px;
-    font-size: 13px;
-}
-
-.live {
-    color: #65e6a0;
-}
-
-.wait {
-    color: #ffd166;
-}
-
-.stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.card {
-    background: #101d2f;
-    border: 1px solid #203047;
-    border-radius: 10px;
-    padding: 12px;
-}
-
-.label {
-    font-size: 11px;
-    color: #8fa3bd;
-}
-
-.value {
-    font-size: 18px;
-    margin-top: 5px;
-}
-
-.chartbox {
-    background: #091321;
-    border: 1px solid #263a54;
-    border-radius: 12px;
-    padding: 10px;
-}
-
-.charttitle {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 5px 10px;
-    font-size: 14px;
-}
-
-canvas {
-    width: 100%;
-    height: 430px;
-    display: block;
-    background: #08111e;
-    border-radius: 8px;
-}
-
-.result {
-    margin-top: 14px;
-    background: #101d2f;
-    border: 1px solid #203047;
-    border-radius: 10px;
-    padding: 15px;
-}
-
-.result h2 {
-    margin: 0 0 10px;
-    font-size: 17px;
-}
-
-.green {
-    color: #65e6a0;
-}
-
-.yellow {
-    color: #ffd166;
-}
-
-.small {
-    font-size: 12px;
-    color: #8fa3bd;
-}
-
-@media(max-width:700px) {
-
-    .controls {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    button {
-        grid-column: span 2;
-    }
-
-    .stats {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    canvas {
-        height: 360px;
-    }
-}
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef4ff;font-family:Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}.logo{font-size:30px;font-weight:900}.logo span{color:#f5c44e}.badge{border:1px solid #30445e;border-radius:20px;padding:10px 14px;color:#aab9cf;font-size:12px}.status{margin-top:7px;font-size:13px}.live{color:#49e28b}.wait{color:#ffd166}.offline{color:#ff7070}.controls,.card{background:#101d2f;border:1px solid #293b57;border-radius:15px;padding:14px}.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.controls button{grid-column:1/-1}select,button{padding:12px;border-radius:9px;border:1px solid #30445e;background:#18253c;color:#fff;font-weight:800}button{background:#f5c44e;color:#15120a;border:0;cursor:pointer}.chart-card{margin-top:15px}.chart-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}.chart-head h2{margin:0;font-size:21px}.sub{color:#94a6bf;font-size:12px}.chart{height:430px;background:#08111e;border:1px solid #293b57;border-radius:11px;overflow:hidden}canvas{display:block;width:100%;height:100%}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px}.stat{background:#18253c;border-radius:9px;padding:11px}.k{font-size:11px;color:#94a6bf}.v{font-size:18px;margin-top:5px;font-weight:800}.result{margin-top:15px}.result h2{margin:0 0 10px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.check{padding:10px;background:#0b1727;border:1px solid #293b57;border-radius:8px;font-size:13px}.green{color:#49e28b}.yellow{color:#ffd166}.signal{font-size:22px;font-weight:900;margin-top:10px}.footer{text-align:center;color:#7f91aa;font-size:11px;padding:18px 0}.small{font-size:12px;color:#94a6bf}@media(max-width:700px){.wrap{padding:14px}.top{display:block}.badge{display:inline-block;margin-top:10px}.controls{grid-template-columns:1fr 1fr}.controls button{grid-column:1/-1}.stats{grid-template-columns:1fr 1fr}.chart{height:390px}.checks{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
-
-<header>
-
-    <h1>RoyalScanner</h1>
-
-    <div class="badge">
-        ANALYSIS ONLY • NO EXECUTION
-    </div>
-
-</header>
-
 <div class="wrap">
+<div class="top"><div><div class="logo">Royal<span>Scanner</span></div><div id="status" class="status offline">● Connecting to live MT5 feed…</div></div><div class="badge">ANALYSIS ONLY • NO EXECUTION</div></div>
 
-    <div class="controls">
+<div class="controls">
+<select id="market"><option value="gold">XAUUSD — Gold</option><option value="nas100">NAS100</option><option value="us30">US30</option></select>
+<select id="mode"><option value="real">Real Market</option><option value="demo">Demo Market</option></select>
+<select id="tf"><option>M1</option><option selected>M5</option><option>M15</option><option>H1</option><option>H4</option></select>
+<select id="strategy"><option>CRT + 714</option><option>CRT</option><option>714 Method</option></select>
+<button id="scan">SCAN CHART</button>
+</div>
 
-        <select id="market">
-            <option value="gold">XAUUSD — Gold</option>
-            <option value="nas100">NAS100</option>
-            <option value="us30">US30</option>
-        </select>
+<div class="card chart-card">
+<div class="chart-head"><h2 id="title">XAUUSD • M5 • LIVE</h2><div id="updated" class="sub">Waiting…</div></div>
+<div id="feed" class="sub">Live price feed: waiting…</div>
+<div class="chart"><canvas id="chart"></canvas></div>
+<div class="stats">
+<div class="stat"><div class="k">BID</div><div id="bid" class="v">—</div></div>
+<div class="stat"><div class="k">ASK</div><div id="ask" class="v">—</div></div>
+<div class="stat"><div class="k">SPREAD</div><div id="spread" class="v">—</div></div>
+<div class="stat"><div class="k">CANDLES</div><div id="count" class="v">0</div></div>
+</div>
+</div>
 
-        <select id="mode">
-            <option value="real">Real Market</option>
-            <option value="demo">Demo Market</option>
-        </select>
+<div class="card result">
+<h2>CRT Detection</h2>
+<div id="resultText" class="yellow">WAIT — waiting for CRT conditions.</div>
+<div class="checks">
+<div id="rangeCheck" class="check">CRT range: WAIT</div>
+<div id="sweepCheck" class="check">Liquidity sweep: WAIT</div>
+<div id="reclaimCheck" class="check">Range reclaim: WAIT</div>
+<div id="structureCheck" class="check">Structure shift: WAIT</div>
+<div id="displacementCheck" class="check">Displacement: WAIT</div>
+<div id="fvgCheck" class="check">FVG: WAIT</div>
+</div>
+<p class="small">Initial CRT rule: latest completed H1 candle is used as the reference range. The detector does not execute trades.</p>
+</div>
 
-        <select id="tf">
-            <option>M1</option>
-            <option selected>M5</option>
-            <option>M15</option>
-            <option>H1</option>
-            <option>H4</option>
-        </select>
+<div class="card result">
+<h2>Scanner Result</h2>
+<div id="signal" class="signal yellow">WAIT — no confirmed CRT setup.</div>
+<p id="signalNote" class="small">Waiting for CRT confirmation.</p>
+</div>
 
-        <select id="strategy">
-            <option>CRT + 714</option>
-            <option>CRT</option>
-            <option>714 Method</option>
-        </select>
-
-        <button id="scan">
-            SCAN CHART
-        </button>
-
-    </div>
-
-    <div class="status" id="status">
-        Connecting to MT5...
-    </div>
-
-    <div class="stats">
-
-        <div class="card">
-            <div class="label">BID</div>
-            <div class="value" id="bid">—</div>
-        </div>
-
-        <div class="card">
-            <div class="label">ASK</div>
-            <div class="value" id="ask">—</div>
-        </div>
-
-        <div class="card">
-            <div class="label">SPREAD</div>
-            <div class="value" id="spread">—</div>
-        </div>
-
-        <div class="card">
-            <div class="label">CANDLES</div>
-            <div class="value" id="count">0</div>
-        </div>
-
-    </div>
-
-    <div class="chartbox">
-
-        <div class="charttitle">
-
-            <strong id="chartTitle">
-                XAUUSD • M5 • LIVE
-            </strong>
-
-            <span class="small" id="updated">
-                Waiting for data...
-            </span>
-
-        </div>
-
-        <canvas id="chart"></canvas>
-
-    </div>
-
-    <div class="result">
-
-        <h2>Scanner Result</h2>
-
-        <div id="resultText" class="yellow">
-            WAIT — waiting for CRT/714 confirmation.
-        </div>
-
-        <p class="small">
-            RoyalScanner analyzes market data only.
-            It does not execute trades.
-        </p>
-
-    </div>
-
+<div class="footer">RoyalScanner • Live MT5 → Cloudflare feed • Analysis only • No trade execution</div>
 </div>
 
 <script>
+const API='https://royalscanner-bridge.fxnicole031120.workers.dev/';
+const $=id=>document.getElementById(id);
+const names={gold:'XAUUSD',nas100:'NAS100',us30:'US30'};
+let candles=[],crt=null;
+const canvas=$('chart'),ctx=canvas.getContext('2d');
 
-const API =
-"https://royalscanner-bridge.fxnicole031120.workers.dev/";
+function fmt(n){return Number.isFinite(Number(n))?Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}
+function valid(c){return c&&[c.time,c.open,c.high,c.low,c.close].every(v=>Number.isFinite(Number(v)))}
+function resize(){const r=canvas.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);draw()}
+window.addEventListener('resize',resize);
 
-const canvas =
-document.getElementById("chart");
-
-const ctx =
-canvas.getContext("2d");
-
-const marketNames = {
-
-    gold: "XAUUSD",
-
-    nas100: "NAS100",
-
-    us30: "US30"
-
-};
-
-
-function resizeCanvas() {
-
-    const rect =
-    canvas.getBoundingClientRect();
-
-    const dpr =
-    window.devicePixelRatio || 1;
-
-    canvas.width =
-    rect.width * dpr;
-
-    canvas.height =
-    rect.height * dpr;
-
-    ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
-    );
-
+function detectCRT(h1,m5){
+ const out={status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,structure:false,displacement:false,fvg:false,fvgType:null,reason:'Waiting for liquidity sweep.'};
+ h1=(h1||[]).filter(valid);m5=(m5||[]).filter(valid);
+ if(h1.length<3||m5.length<20){out.reason='Not enough H1/M5 candle history.';return out}
+ const closed=h1.slice(0,-1),ref=closed[closed.length-1];out.reference=ref;
+ const hi=+ref.high,lo=+ref.low;if(!(hi>lo)){out.reason='Invalid CRT range.';return out}
+ const after=m5.filter(c=>+c.time>+ref.time);if(after.length<3){out.reason='Waiting for M5 candles after CRT reference.';return out}
+ let si=-1,dir=null;
+ for(let i=0;i<after.length;i++){const c=after[i];if(+c.low<lo&&+c.close>lo){si=i;dir='BULLISH';out.sweep=c;out.reclaim=true;break}if(+c.high>hi&&+c.close<hi){si=i;dir='BEARISH';out.sweep=c;out.reclaim=true;break}}
+ if(si<0)return out;
+ out.direction=dir;
+ const before=after.slice(Math.max(0,si-8),si),post=after.slice(si+1);
+ if(before.length){if(dir==='BULLISH'){const ph=Math.max(...before.map(c=>+c.high));out.structure=post.some(c=>+c.close>ph)}else{const pl=Math.min(...before.map(c=>+c.low));out.structure=post.some(c=>+c.close<pl)}}
+ const base=after.slice(Math.max(0,si-10),si).map(c=>+c.high-+c.low).filter(x=>x>0);const avg=base.length?base.reduce((a,b)=>a+b,0)/base.length:0;
+ for(const c of post.slice(0,12)){const body=Math.abs(+c.close-+c.open),bull=+c.close>+c.open,bear=+c.close<+c.open;if(avg&&body>=avg*1.5&&((dir==='BULLISH'&&bull)||(dir==='BEARISH'&&bear))){out.displacement=true;break}}
+ for(let i=Math.max(1,si+1);i<after.length-1;i++){const a=after[i-1],c=after[i+1];if(dir==='BULLISH'&&+a.high<+c.low){out.fvg=true;out.fvgType='BULLISH';break}if(dir==='BEARISH'&&+a.low>+c.high){out.fvg=true;out.fvgType='BEARISH';break}}
+ const n=[out.reclaim,out.structure,out.displacement,out.fvg].filter(Boolean).length;
+ if(out.reclaim&&out.structure&&out.displacement&&out.fvg){out.status='CONFIRMED';out.reason=dir+' CRT setup confirmed: sweep + reclaim + structure shift + displacement + FVG.'}
+ else if(n>=2){out.status='DEVELOPING';out.reason=dir+' CRT setup developing. Additional confirmation is required.'}
+ else out.reason=dir+' liquidity sweep detected. Waiting for stronger confirmation.';
+ return out;
 }
 
-
-window.addEventListener(
-    "resize",
-    resizeCanvas
-);
-
-resizeCanvas();
-
-
-function drawCandles(candles) {
-
-    const W =
-    canvas.clientWidth;
-
-    const H =
-    canvas.clientHeight;
-
-    ctx.clearRect(
-        0,
-        0,
-        W,
-        H
-    );
-
-    ctx.fillStyle =
-    "#08111e";
-
-    ctx.fillRect(
-        0,
-        0,
-        W,
-        H
-    );
-
-
-    if (!candles || candles.length === 0) {
-
-        ctx.fillStyle =
-        "#8fa3bd";
-
-        ctx.font =
-        "14px Arial";
-
-        ctx.fillText(
-            "Waiting for live MT5 candle data...",
-            20,
-            30
-        );
-
-        return;
-
-    }
-
-
-    const visible =
-    candles.slice(-80);
-
-
-    let low =
-    Infinity;
-
-    let high =
-    -Infinity;
-
-
-    visible.forEach(c => {
-
-        low =
-        Math.min(low, c.low);
-
-        high =
-        Math.max(high, c.high);
-
-    });
-
-
-    const padding =
-    (high - low) * 0.08 || 1;
-
-    low -= padding;
-    high += padding;
-
-
-    const left =
-    55;
-
-    const right =
-    15;
-
-    const top =
-    15;
-
-    const bottom =
-    30;
-
-
-    const chartWidth =
-    W - left - right;
-
-    const chartHeight =
-    H - top - bottom;
-
-
-    const candleWidth =
-    chartWidth / visible.length;
-
-
-    const bodyWidth =
-    Math.max(
-        2,
-        candleWidth * 0.58
-    );
-
-
-    function priceToY(price) {
-
-        return top +
-        ((high - price) /
-        (high - low)) *
-        chartHeight;
-
-    }
-
-
-    /* GRID */
-
-    ctx.strokeStyle =
-    "#17283d";
-
-    ctx.lineWidth =
-    1;
-
-
-    for (
-        let i = 0;
-        i <= 5;
-        i++
-    ) {
-
-        const y =
-        top +
-        chartHeight *
-        i / 5;
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            left,
-            y
-        );
-
-        ctx.lineTo(
-            W - right,
-            y
-        );
-
-        ctx.stroke();
-
-
-        const price =
-        high -
-        ((high - low) *
-        i / 5);
-
-
-        ctx.fillStyle =
-        "#6f829b";
-
-        ctx.font =
-        "10px Arial";
-
-        ctx.fillText(
-            price.toFixed(2),
-            5,
-            y + 3
-        );
-
-    }
-
-
-    /* CANDLES */
-
-    visible.forEach(
-        (candle, index) => {
-
-            const x =
-            left +
-            index *
-            candleWidth +
-            candleWidth / 2;
-
-
-            const openY =
-            priceToY(
-                candle.open
-            );
-
-            const closeY =
-            priceToY(
-                candle.close
-            );
-
-            const highY =
-            priceToY(
-                candle.high
-            );
-
-            const lowY =
-            priceToY(
-                candle.low
-            );
-
-
-            const bullish =
-            candle.close >=
-            candle.open;
-
-
-            if (bullish) {
-
-                ctx.strokeStyle =
-                "#49d17d";
-
-                ctx.fillStyle =
-                "#49d17d";
-
-            } else {
-
-                ctx.strokeStyle =
-                "#ff5c5c";
-
-                ctx.fillStyle =
-                "#ff5c5c";
-
-            }
-
-
-            /* WICK */
-
-            ctx.lineWidth =
-            1;
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                x,
-                highY
-            );
-
-            ctx.lineTo(
-                x,
-                lowY
-            );
-
-            ctx.stroke();
-
-
-            /* BODY */
-
-            const bodyTop =
-            Math.min(
-                openY,
-                closeY
-            );
-
-            const bodyHeight =
-            Math.max(
-                1,
-                Math.abs(
-                    closeY -
-                    openY
-                )
-            );
-
-
-            ctx.fillRect(
-                x -
-                bodyWidth / 2,
-                bodyTop,
-                bodyWidth,
-                bodyHeight
-            );
-
-        }
-    );
-
-
-    /* TIME LABELS */
-
-    ctx.fillStyle =
-    "#6f829b";
-
-    ctx.font =
-    "10px Arial";
-
-
-    const first =
-    visible[0];
-
-    const last =
-    visible[visible.length - 1];
-
-
-    if (first && first.time) {
-
-        const firstTime =
-        new Date(
-            first.time * 1000
-        ).toLocaleTimeString(
-            [],
-            {
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-
-
-        ctx.fillText(
-            firstTime,
-            left,
-            H - 8
-        );
-
-    }
-
-
-    if (last && last.time) {
-
-        const lastTime =
-        new Date(
-            last.time * 1000
-        ).toLocaleTimeString(
-            [],
-            {
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-
-
-        ctx.fillText(
-            lastTime,
-            W - 70,
-            H - 8
-        );
-
-    }
-
+function draw(){
+ const W=canvas.clientWidth,H=canvas.clientHeight;ctx.clearRect(0,0,W,H);ctx.fillStyle='#08111e';ctx.fillRect(0,0,W,H);
+ if(!candles.length){ctx.fillStyle='#94a6bf';ctx.font='14px Arial';ctx.fillText('Waiting for live MT5 candle data...',20,30);return}
+ const v=candles.slice(-80);let lo=Infinity,hi=-Infinity;v.forEach(c=>{lo=Math.min(lo,+c.low);hi=Math.max(hi,+c.high)});if(crt?.reference){lo=Math.min(lo,+crt.reference.low);hi=Math.max(hi,+crt.reference.high)}const pad=(hi-lo)*.08||1;lo-=pad;hi+=pad;
+ const L=55,R=15,T=15,B=30,cw=(W-L-R)/v.length,ch=H-T-B,bw=Math.max(2,cw*.58),py=p=>T+(hi-p)/(hi-lo)*ch;
+ ctx.strokeStyle='#17283d';ctx.lineWidth=1;for(let i=0;i<=5;i++){const y=T+ch*i/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillStyle='#6f829b';ctx.font='10px Arial';ctx.fillText((hi-(hi-lo)*i/5).toFixed(2),5,y+3)}
+ v.forEach((c,i)=>{const x=L+i*cw+cw/2,o=py(+c.open),cl=py(+c.close),h=py(+c.high),l=py(+c.low),bull=+c.close>=+c.open;ctx.strokeStyle=ctx.fillStyle=bull?'#49d17d':'#ff5c5c';ctx.beginPath();ctx.moveTo(x,h);ctx.lineTo(x,l);ctx.stroke();ctx.fillRect(x-bw/2,Math.min(o,cl),bw,Math.max(1,Math.abs(cl-o)))});
+ if(crt?.reference){const yh=py(+crt.reference.high),yl=py(+crt.reference.low);ctx.strokeStyle='#f5c44e';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(L,yh);ctx.lineTo(W-R,yh);ctx.stroke();ctx.beginPath();ctx.moveTo(L,yl);ctx.lineTo(W-R,yl);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f5c44e';ctx.font='12px Arial';ctx.fillText('CRT HIGH',W-85,yh-5);ctx.fillText('CRT LOW',W-82,yl+15)}
+ ctx.fillStyle='#6f829b';ctx.font='10px Arial';if(v[0]?.time)ctx.fillText(new Date(+v[0].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),L,H-8);if(v[v.length-1]?.time)ctx.fillText(new Date(+v[v.length-1].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),W-70,H-8)
 }
 
-
-async function loadLiveData() {
-
-    const mode =
-    document.getElementById(
-        "mode"
-    ).value;
-
-
-    const market =
-    document.getElementById(
-        "market"
-    ).value;
-
-
-    const timeframe =
-    document.getElementById(
-        "tf"
-    ).value;
-
-
-    document.getElementById(
-        "chartTitle"
-    ).textContent =
-    marketNames[market] +
-    " • " +
-    timeframe +
-    " • " +
-    (
-        mode === "real"
-        ? "LIVE"
-        : "DEMO"
-    );
-
-
-    if (mode === "demo") {
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-        '<span class="wait">DEMO MARKET</span> — live feed disabled.';
-
-        drawCandles([]);
-
-        return;
-
-    }
-
-
-    try {
-
-        const response =
-        await fetch(
-            API +
-            "?t=" +
-            Date.now(),
-            {
-                cache: "no-store"
-            }
-        );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "HTTP " +
-                response.status
-            );
-
-        }
-
-
-        const json =
-        await response.json();
-
-
-        const symbolData =
-        json?.data?.[market];
-
-
-        if (!symbolData) {
-
-            document.getElementById(
-                "status"
-            ).innerHTML =
-            '<span class="wait">WAITING</span> — no market data received.';
-
-            drawCandles([]);
-
-            return;
-
-        }
-
-
-        const candles =
-        symbolData
-        ?.timeframes
-        ?.[timeframe] || [];
-
-
-        document.getElementById(
-            "bid"
-        ).textContent =
-        Number(
-            symbolData.bid
-        ).toFixed(2);
-
-
-        document.getElementById(
-            "ask"
-        ).textContent =
-        Number(
-            symbolData.ask
-        ).toFixed(2);
-
-
-        document.getElementById(
-            "spread"
-        ).textContent =
-        (
-            Number(symbolData.ask) -
-            Number(symbolData.bid)
-        ).toFixed(2);
-
-
-        document.getElementById(
-            "count"
-        ).textContent =
-        candles.length;
-
-
-        document.getElementById(
-            "updated"
-        ).textContent =
-        json.data.updated
-        ?
-        new Date(
-            json.data.updated
-        ).toLocaleTimeString()
-        :
-        "LIVE";
-
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-        '<span class="live">● LIVE MT5 FEED CONNECTED</span> — real OHLC candles received.';
-
-
-        drawCandles(
-            candles
-        );
-
-
-    } catch (error) {
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-        '<span class="wait">CONNECTION ERROR</span> — ' +
-        error.message;
-
-
-        drawCandles([]);
-
-    }
-
+function check(id,text,ok){$(id).textContent=text+(ok?' ✓':' — WAIT');$(id).className='check '+(ok?'green':'yellow')}
+function showCRT(x){
+ if(!x?.reference){$('resultText').textContent='WAIT — insufficient candle history for CRT detection.';return}
+ const r=x.reference;check('rangeCheck','CRT range: '+fmt(r.high)+' / '+fmt(r.low),true);check('sweepCheck','Liquidity sweep:',!!x.sweep);check('reclaimCheck','Range reclaim:',x.reclaim);check('structureCheck','Structure shift:',x.structure);check('displacementCheck','Displacement:',x.displacement);check('fvgCheck','FVG'+(x.fvgType?' '+x.fvgType:''),x.fvg);
+ $('resultText').innerHTML='<strong>CRT DETECTION</strong><br><br>Reference H1 candle: '+new Date(+r.time*1000).toLocaleString()+'<br>CRT HIGH: '+fmt(r.high)+'<br>CRT LOW: '+fmt(r.low)+'<br><br>Direction hypothesis: '+(x.direction||'NONE')+'<br>Status: <strong>'+x.status+'</strong><br><br><span class="small">'+x.reason+'</span>';
+ if(x.status==='CONFIRMED'){$('signal').textContent=x.direction+' CRT CONFIRMED';$('signal').className='signal green';$('signalNote').textContent='All initial CRT confirmation conditions detected. This is analysis only.'}else if(x.status==='DEVELOPING'){$('signal').textContent=x.direction+' CRT DEVELOPING';$('signal').className='signal yellow';$('signalNote').textContent='Additional confirmation is still required.'}else{$('signal').textContent='WAIT — no confirmed CRT setup.';$('signal').className='signal yellow';$('signalNote').textContent='Waiting for the required CRT conditions.'}
 }
 
+async function load(){
+ const mode=$('mode').value,market=$('market').value,tf=$('tf').value;$('title').textContent=names[market]+' • '+tf+' • '+(mode==='real'?'LIVE':'DEMO');
+ if(mode==='demo'){candles=[];crt=null;$('status').textContent='● Demo Market';$('status').className='status wait';draw();return}
+ try{const r=await fetch(API+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json(),d=j?.data?.[market];if(!d)throw Error('No symbol data received');
+ $('status').innerHTML='● <span class="live">LIVE MT5 FEED CONNECTED</span> — real OHLC candles received.';$('feed').textContent='MT5 symbol: '+d.symbol+' • Updated '+(j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE');$('updated').textContent=j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE';$('bid').textContent=fmt(d.bid);$('ask').textContent=fmt(d.ask);$('spread').textContent=fmt(+d.ask-+d.bid);candles=d?.timeframes?.[tf]||[];$('count').textContent=candles.length;crt=detectCRT(d?.timeframes?.H1||[],d?.timeframes?.M5||[]);draw();showCRT(crt)
+ }catch(e){$('status').innerHTML='<span class="offline">● LIVE FEED ERROR</span> — '+e.message;draw()}
+}
 
-document.getElementById(
-    "scan"
-).addEventListener(
-    "click",
-    function() {
-
-        document.getElementById(
-            "resultText"
-        ).innerHTML =
-        '<span class="yellow">WAIT — scanning CRT + 714 conditions. No trade execution.</span>';
-
-        loadLiveData();
-
-    }
-);
-
-
-[
-    "market",
-    "mode",
-    "tf",
-    "strategy"
-].forEach(
-    function(id) {
-
-        document
-        .getElementById(id)
-        .addEventListener(
-            "change",
-            loadLiveData
-        );
-
-    }
-);
-
-
-loadLiveData();
-
-
-setInterval(
-    loadLiveData,
-    2000
-);
-
+$('scan').addEventListener('click',load);['market','mode','tf','strategy'].forEach(id=>$(id).addEventListener('change',load));resize();load();setInterval(load,2000);
 </script>
-
 </body>
 </html>
