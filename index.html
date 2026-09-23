@@ -71,7 +71,7 @@ window.addEventListener('resize',resize);
 function detectCRT(h1,m5){
  const out={
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
-  structure:false,displacement:false,fvg:false,fvgType:null,
+  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,fvg:false,fvgType:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -128,19 +128,36 @@ function detectCRT(h1,m5){
  out.penetration=latestSweep.penetration;
  out.reclaim=true;
 
- const before=after.slice(Math.max(0,si-8),si);
  const post=after.slice(si+1);
 
- // Structure: after the sweep, price must close beyond the local structure
- // level that existed immediately before the sweep.
- if(before.length){
-  if(out.direction==='BULLISH'){
-   const ph=Math.max(...before.map(x=>+x.high));
-   out.structure=post.some(x=>+x.close>ph);
-  }else{
-   const pl=Math.min(...before.map(x=>+x.low));
-   out.structure=post.some(x=>+x.close<pl);
+ // MSS/BOS: identify a real local M5 swing after the liquidity sweep.
+ // A swing high/low uses two candles on each side (configurable here).
+ // Confirmation requires a CLOSED candle beyond that swing level.
+ const SWING=2;
+ const candidates=after.slice(si+1);
+ let structure=null;
+ for(let i=SWING;i<candidates.length-SWING;i++){
+  const c=candidates[i];
+  const highs=[]; const lows=[];
+  for(let k=i-SWING;k<=i+SWING;k++){ if(k!==i){highs.push(+candidates[k].high);lows.push(+candidates[k].low)} }
+  const isSwingHigh=+c.high>Math.max(...highs);
+  const isSwingLow=+c.low<Math.min(...lows);
+  if(out.direction==='BEARISH' && isSwingLow){
+   const level=+c.low;
+   const breaker=candidates.slice(i+1).find(x=>+x.close<level);
+   if(breaker){structure={level,candle:c,breaker,type:'BEARISH'};break}
   }
+  if(out.direction==='BULLISH' && isSwingHigh){
+   const level=+c.high;
+   const breaker=candidates.slice(i+1).find(x=>+x.close>level);
+   if(breaker){structure={level,candle:c,breaker,type:'BULLISH'};break}
+  }
+ }
+ if(structure){
+  out.structure=true;
+  out.structureLevel=structure.level;
+  out.structureCandle=structure.breaker;
+  out.structureType=structure.type;
  }
 
  // Displacement: directional candle body is at least 1.5x the average
@@ -179,7 +196,7 @@ function detectCRT(h1,m5){
   out.reason=out.direction+' CRT setup confirmed: sweep + reclaim + structure shift + displacement + FVG.';
  }else if(n>=2){
   out.status='DEVELOPING';
-  out.reason=out.direction+' CRT setup developing. Sweep/reclaim detected; additional confirmation is required.';
+  out.reason=out.direction+' CRT setup developing. MSS detected; displacement and FVG confirmation are still required.';
  }else{
   out.reason=out.direction+' liquidity sweep detected. Waiting for stronger confirmation.';
  }
@@ -194,6 +211,25 @@ function draw(){
  ctx.strokeStyle='#17283d';ctx.lineWidth=1;for(let i=0;i<=5;i++){const y=T+ch*i/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillStyle='#6f829b';ctx.font='10px Arial';ctx.fillText((hi-(hi-lo)*i/5).toFixed(2),5,y+3)}
  v.forEach((c,i)=>{const x=L+i*cw+cw/2,o=py(+c.open),cl=py(+c.close),h=py(+c.high),l=py(+c.low),bull=+c.close>=+c.open;ctx.strokeStyle=ctx.fillStyle=bull?'#49d17d':'#ff5c5c';ctx.beginPath();ctx.moveTo(x,h);ctx.lineTo(x,l);ctx.stroke();ctx.fillRect(x-bw/2,Math.min(o,cl),bw,Math.max(1,Math.abs(cl-o)))});
  if(crt?.reference){const yh=py(+crt.reference.high),yl=py(+crt.reference.low);ctx.strokeStyle='#f5c44e';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(L,yh);ctx.lineTo(W-R,yh);ctx.stroke();ctx.beginPath();ctx.moveTo(L,yl);ctx.lineTo(W-R,yl);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f5c44e';ctx.font='12px Arial';ctx.fillText('CRT HIGH',W-85,yh-5);ctx.fillText('CRT LOW',W-82,yl+15)}
+ // Draw the MSS/BOS structure level and mark the candle that closed through it.
+ if(crt?.structure && crt.structureLevel!=null){
+  const ys=py(+crt.structureLevel);
+  ctx.save();
+  ctx.strokeStyle='#b98cff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(L,ys);ctx.lineTo(W-R,ys);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#b98cff';ctx.font='bold 11px Arial';
+  ctx.fillText('MSS '+fmt(crt.structureLevel),L+5,Math.max(T+12,ys-6));
+  const bi=v.findIndex(x=>+x.time===+(crt.structureCandle?.time));
+  if(bi>=0){
+   const bx=L+bi*cw+cw/2, by=py(crt.direction==='BULLISH'?+v[bi].low:+v[bi].high);
+   ctx.strokeStyle='#b98cff';ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(bx,Math.max(T,by-24));ctx.lineTo(bx,Math.min(H-B,by+24));ctx.stroke();
+   ctx.fillStyle='#b98cff';ctx.beginPath();ctx.arc(bx,by,5,0,Math.PI*2);ctx.fill();
+   ctx.font='bold 11px Arial';ctx.fillText('MSS',Math.min(W-45,Math.max(L,bx-15)),crt.direction==='BULLISH'?Math.max(T+12,by-28):Math.min(H-B-4,by+36));
+  }
+  ctx.restore();
+ }
+
  // Mark the exact M5 candle that produced the latest valid liquidity sweep.
  if(crt?.sweep){
   const idx=v.findIndex(x=>+x.time===+crt.sweep.time);
@@ -225,7 +261,7 @@ function showCRT(x){
  check('rangeCheck','CRT range: '+fmt(r.high)+' / '+fmt(r.low),true);
  check('sweepCheck',x.sweep?('Liquidity sweep: '+x.sweepType+' @ '+fmt(x.sweepPrice)):'Liquidity sweep:',!!x.sweep);
  check('reclaimCheck',x.sweep?('Range reclaim: '+(x.reclaim?'CONFIRMED':'WAIT')):'Range reclaim:',x.reclaim);
- check('structureCheck','Structure shift:',x.structure);
+ check('structureCheck',x.structure?('Market structure shift: '+x.structureType+' below/above '+fmt(x.structureLevel)):'Market structure shift:',x.structure);
  check('displacementCheck','Displacement:',x.displacement);
  check('fvgCheck','FVG'+(x.fvgType?' '+x.fvgType:''),x.fvg);
 
@@ -242,6 +278,7 @@ function showCRT(x){
   +'<br>CRT LOW: '+fmt(r.low)
   +sweepText
   +'<br><br>Direction hypothesis: '+(x.direction||'NONE')
+  +(x.structure?'<br>MSS level: '+fmt(x.structureLevel)+'<br>MSS candle close: '+fmt(x.structureCandle.close):'')
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
@@ -256,7 +293,7 @@ function showCRT(x){
  }else if(x.sweep){
   $('signal').textContent=x.direction+' LIQUIDITY SWEEP DETECTED';
   $('signal').className='signal yellow';
-  $('signalNote').textContent='Sweep and range reclaim detected. Waiting for structure, displacement and FVG confirmation.';
+  $('signalNote').textContent='Liquidity sweep/reclaim detected. Waiting for MSS, displacement and FVG confirmation.';
  }else{
   $('signal').textContent='WAIT — no confirmed CRT setup.';
   $('signal').className='signal yellow';
