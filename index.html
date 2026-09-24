@@ -48,6 +48,17 @@
 </div>
 
 <div class="card result">
+<h2>714 Alignment</h2>
+<div id="714Text" class="yellow">WAIT — calculating 714 time window.</div>
+<div class="checks">
+<div id="714Window" class="check">714 window: WAIT</div>
+<div id="714Direction" class="check">714 direction: WAIT</div>
+<div id="714Alignment" class="check">CRT + 714 alignment: WAIT</div>
+</div>
+<p class="small">714 is treated as a configurable time-and-price confirmation framework. It does not guarantee a reversal and does not execute trades.</p>
+</div>
+
+<div class="card result">
 <h2>Scanner Result</h2>
 <div id="signal" class="signal yellow">WAIT — no confirmed CRT setup.</div>
 <p id="signalNote" class="small">Waiting for CRT confirmation.</p>
@@ -72,6 +83,7 @@ function detectCRT(h1,m5){
  const out={
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
   structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,fvgTop:null,fvgBottom:null,fvgCandle:null,fvgSize:null,reaction:false,reactionCandle:null,reactionPrice:null,
+  method714:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -237,6 +249,25 @@ function detectCRT(h1,m5){
    if(touches && rejects){out.reaction=true;out.reactionCandle=x;out.reactionPrice=close;break;}
   }
  }
+ // 714 alignment: configurable observation points are UTC+2 local clock times.
+ // We use the latest completed 1-hour candle containing a configured 714 point,
+ // then compare its direction with the CRT hypothesis. A bullish 714 hour aligns
+ // with a bearish CRT reversal hypothesis, and vice versa.
+ const points=[7,13,16];
+ function hourAt(ts){return new Date(+ts*1000).toLocaleString('en-ZA',{timeZone:'Africa/Johannesburg',hour:'2-digit',hour12:false});}
+ function hourNum(ts){return Number(hourAt(ts));}
+ let w714=null;
+ for(let i=closed.length-1;i>=0;i--){
+  const hc=closed[i],h=hourNum(hc.time);
+  if(points.includes(h)){w714=hc;break;}
+ }
+ if(w714 && out.direction){
+  const bull=+w714.close>+w714.open, bear=+w714.close<+w714.open;
+  const priceDir=bull?'BULLISH':bear?'BEARISH':'NEUTRAL';
+  const aligned=(out.direction==='BEARISH'&&bull)||(out.direction==='BULLISH'&&bear);
+  out.method714={hour:hourNum(w714.time),candle:w714,direction:priceDir,aligned};
+ }
+
  const n=[out.reclaim,out.structure,out.displacement,out.fvg,out.reaction].filter(Boolean).length;
  if(out.reclaim&&out.structure&&out.displacement&&out.fvg&&out.reaction){
   out.status='CONFIRMED';
@@ -360,6 +391,17 @@ function showCRT(x){
  check('displacementCheck',x.displacement?('Displacement: CONFIRMED'+(x.displacementRatio?' • '+x.displacementRatio.toFixed(2)+'x range':'')):'Displacement:',x.displacement);
  check('fvgCheck',x.fvg?('FVG '+x.fvgType+' • '+fmt(x.fvgSize)+(x.reaction?' • REACTION':' • WAIT REACTION')):'FVG:',x.fvg);
 
+
+ const m=x.method714;
+ if(m){
+  check('714Window','714 observation: '+String(m.hour).padStart(2,'0')+':00',true);
+  check('714Direction','714 hour: '+m.direction,m.direction!=='NEUTRAL');
+  check('714Alignment',m.aligned?'CRT + 714 aligned':'CRT + 714 not aligned',m.aligned);
+  $('714Text').innerHTML='<strong>714 OBSERVATION</strong><br>'+String(m.hour).padStart(2,'0')+':00 candle: <strong>'+m.direction+'</strong><br>CRT hypothesis: <strong>'+x.direction+'</strong><br>Alignment: <strong>'+(m.aligned?'YES':'NO')+'</strong>';
+ } else {
+  $('714Window').textContent='714 window: WAIT';$('714Direction').textContent='714 direction: WAIT';$('714Alignment').textContent='CRT + 714 alignment: WAIT';$('714Text').textContent='WAIT — no completed configured 714 observation candle is available yet.';
+ }
+
  const sweepText=x.sweep
   ? '<br>Liquidity sweep: <strong>'+x.sweepType+'</strong>'
     +'<br>Sweep price: '+fmt(x.sweepPrice)
@@ -380,10 +422,14 @@ function showCRT(x){
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
- if(x.status==='CONFIRMED'){
-  $('signal').textContent=x.direction+' CRT CONFIRMED';
+ if(x.status==='CONFIRMED' && x.method714?.aligned){
+  $('signal').textContent=x.direction+' CRT + 714 ALIGNED';
   $('signal').className='signal green';
   $('signalNote').textContent='All initial CRT confirmation conditions detected. This is analysis only.';
+ }else if(x.status==='CONFIRMED'){
+  $('signal').textContent=x.direction+' CRT CONFIRMED — 714 WAIT/NOT ALIGNED';
+  $('signal').className='signal yellow';
+  $('signalNote').textContent='CRT conditions are present, but the 714 time-and-price condition has not aligned. Analysis only.';
  }else if(x.status==='DEVELOPING'){
   $('signal').textContent=x.direction+' CRT DEVELOPING';
   $('signal').className='signal yellow';
