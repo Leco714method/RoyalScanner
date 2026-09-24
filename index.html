@@ -71,7 +71,7 @@ window.addEventListener('resize',resize);
 function detectCRT(h1,m5){
  const out={
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
-  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,
+  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,fvgTop:null,fvgBottom:null,fvgCandle:null,fvgSize:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -194,18 +194,35 @@ function detectCRT(h1,m5){
   out.displacementRatio=displacement.ratio;
  }
 
- // FVG: three-candle imbalance after the sweep.
- for(let i=Math.max(1,si+1);i<after.length-1;i++){
-  const a=after[i-1],b=after[i],d=after[i+1];
-  if(out.direction==='BULLISH' && +a.high<+d.low){
-   out.fvg=true;
-   out.fvgType='BULLISH';
-   break;
-  }
-  if(out.direction==='BEARISH' && +a.low>+d.high){
-   out.fvg=true;
-   out.fvgType='BEARISH';
-   break;
+ // FVG: three-candle imbalance formed AFTER confirmed displacement.
+ // Bullish FVG: first candle high < third candle low.
+ // Bearish FVG: first candle low > third candle high.
+ // The middle candle is the impulse/formation candle, so the gap must be
+ // created after the displacement candle rather than merely after the sweep.
+ if(out.displacement && out.displacementCandle){
+  const di=after.findIndex(x=>+x.time===+out.displacementCandle.time);
+  if(di>=0){
+   for(let i=Math.max(1,di+1);i<after.length-1;i++){
+    const a=after[i-1],b=after[i],d=after[i+1];
+    if(out.direction==='BULLISH' && +a.high<+d.low){
+     out.fvg=true;
+     out.fvgType='BULLISH';
+     out.fvgBottom=+a.high;
+     out.fvgTop=+d.low;
+     out.fvgCandle=b;
+     out.fvgSize=out.fvgTop-out.fvgBottom;
+     break;
+    }
+    if(out.direction==='BEARISH' && +a.low>+d.high){
+     out.fvg=true;
+     out.fvgType='BEARISH';
+     out.fvgTop=+a.low;
+     out.fvgBottom=+d.high;
+     out.fvgCandle=b;
+     out.fvgSize=out.fvgTop-out.fvgBottom;
+     break;
+    }
+   }
   }
  }
 
@@ -268,6 +285,26 @@ function draw(){
    ctx.restore();
   }
  }
+ // Draw the first fresh FVG zone created after displacement.
+ if(crt?.fvg && crt.fvgTop!=null && crt.fvgBottom!=null && crt.fvgCandle){
+  const fi=v.findIndex(x=>+x.time===+crt.fvgCandle.time);
+  if(fi>=0){
+   const x0=L+Math.max(0,fi-1)*cw;
+   const x1=W-R;
+   const yt=py(+crt.fvgTop), yb=py(+crt.fvgBottom);
+   ctx.save();
+   ctx.fillStyle=crt.fvgType==='BULLISH'?'rgba(73,226,139,.12)':'rgba(255,112,112,.12)';
+   ctx.strokeStyle=crt.fvgType==='BULLISH'?'#49e28b':'#ff7070';
+   ctx.lineWidth=1.5;
+   ctx.fillRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));
+   ctx.strokeRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));
+   ctx.fillStyle=crt.fvgType==='BULLISH'?'#49e28b':'#ff7070';
+   ctx.font='bold 11px Arial';
+   ctx.fillText('FVG '+crt.fvgType,Math.min(W-90,Math.max(L+4,x0+4)),Math.max(T+12,Math.min(yt,yb)-5));
+   ctx.restore();
+  }
+ }
+
  // Mark the confirmed displacement candle after MSS.
  if(crt?.displacement && crt.displacementCandle){
   const di=v.findIndex(x=>+x.time===+crt.displacementCandle.time);
@@ -297,7 +334,7 @@ function showCRT(x){
  check('reclaimCheck',x.sweep?('Range reclaim: '+(x.reclaim?'CONFIRMED':'WAIT')):'Range reclaim:',x.reclaim);
  check('structureCheck',x.structure?('Market structure shift: '+x.structureType+' below/above '+fmt(x.structureLevel)):'Market structure shift:',x.structure);
  check('displacementCheck',x.displacement?('Displacement: CONFIRMED'+(x.displacementRatio?' • '+x.displacementRatio.toFixed(2)+'x range':'')):'Displacement:',x.displacement);
- check('fvgCheck','FVG'+(x.fvgType?' '+x.fvgType:''),x.fvg);
+ check('fvgCheck',x.fvg?('FVG '+x.fvgType+' • '+fmt(x.fvgSize)):'FVG:',x.fvg);
 
  const sweepText=x.sweep
   ? '<br>Liquidity sweep: <strong>'+x.sweepType+'</strong>'
@@ -314,6 +351,7 @@ function showCRT(x){
   +'<br><br>Direction hypothesis: '+(x.direction||'NONE')
   +(x.structure?'<br>MSS level: '+fmt(x.structureLevel)+'<br>MSS candle close: '+fmt(x.structureCandle.close):'')
   +(x.displacement?'<br>Displacement candle close: '+fmt(x.displacementCandle.close)+'<br>Displacement strength: '+fmt(x.displacementRatio)+'x average range':'')
+  +(x.fvg?'<br>FVG zone: '+fmt(x.fvgBottom)+' — '+fmt(x.fvgTop)+'<br>FVG size: '+fmt(x.fvgSize):'')
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
@@ -324,7 +362,7 @@ function showCRT(x){
  }else if(x.status==='DEVELOPING'){
   $('signal').textContent=x.direction+' CRT DEVELOPING';
   $('signal').className='signal yellow';
-  $('signalNote').textContent='Liquidity sweep/reclaim detected. Additional confirmation is still required.';
+  $('signalNote').textContent='CRT sequence is developing. Continue waiting for the remaining confirmation stages.';
  }else if(x.sweep){
   $('signal').textContent=x.direction+' LIQUIDITY SWEEP DETECTED';
   $('signal').className='signal yellow';
