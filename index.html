@@ -71,7 +71,7 @@ window.addEventListener('resize',resize);
 function detectCRT(h1,m5){
  const out={
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
-  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,fvgTop:null,fvgBottom:null,fvgCandle:null,fvgSize:null,
+  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,fvgTop:null,fvgBottom:null,fvgCandle:null,fvgSize:null,reaction:false,reactionCandle:null,reactionPrice:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -226,13 +226,27 @@ function detectCRT(h1,m5){
   }
  }
 
- const n=[out.reclaim,out.structure,out.displacement,out.fvg].filter(Boolean).length;
- if(out.reclaim&&out.structure&&out.displacement&&out.fvg){
+ // FVG reaction: price revisits the FVG and closes away from it in the CRT direction.
+ if(out.fvg && out.fvgCandle){
+  const fi=after.findIndex(x=>+x.time===+out.fvgCandle.time);
+  for(let i=fi+1;i<after.length;i++){
+   const x=after[i],high=+x.high,low=+x.low,close=+x.close;
+   const touches=low<=out.fvgTop && high>=out.fvgBottom;
+   const bullish=close>+x.open, bearish=close<+x.open;
+   const rejects=(out.direction==='BULLISH' && bullish && close>=out.fvgTop) || (out.direction==='BEARISH' && bearish && close<=out.fvgBottom);
+   if(touches && rejects){out.reaction=true;out.reactionCandle=x;out.reactionPrice=close;break;}
+  }
+ }
+ const n=[out.reclaim,out.structure,out.displacement,out.fvg,out.reaction].filter(Boolean).length;
+ if(out.reclaim&&out.structure&&out.displacement&&out.fvg&&out.reaction){
   out.status='CONFIRMED';
-  out.reason=out.direction+' CRT setup confirmed: sweep + reclaim + structure shift + displacement + FVG.';
+  out.reason=out.direction+' CRT setup confirmed: sweep + reclaim + MSS + displacement + FVG reaction.';
+ }else if(out.fvg&&!out.reaction){
+  out.status='DEVELOPING';
+  out.reason=out.direction+' FVG confirmed. Waiting for price to revisit the FVG and show directional rejection.';
  }else if(n>=2){
   out.status='DEVELOPING';
-  out.reason=out.direction+' CRT setup developing. MSS detected; waiting for displacement and FVG confirmation.';
+  out.reason=out.direction+' CRT setup developing. Waiting for the next confirmation layer.';
  }else{
   if(out.structure) out.reason=out.direction+' MSS confirmed. Waiting for displacement and FVG confirmation.';
   else out.reason=out.direction+' liquidity sweep detected. Waiting for MSS confirmation.';
@@ -265,6 +279,16 @@ function draw(){
    ctx.font='bold 11px Arial';ctx.fillText('MSS',Math.min(W-45,Math.max(L,bx-15)),crt.direction==='BULLISH'?Math.max(T+12,by-28):Math.min(H-B-4,by+36));
   }
   ctx.restore();
+ }
+
+ // Draw the FVG reaction zone.
+ if(crt?.fvg && crt.fvgTop!=null && crt.fvgBottom!=null && crt.fvgCandle){
+  const fi=v.findIndex(x=>+x.time===+crt.fvgCandle.time);
+  if(fi>=0){
+   const x0=L+Math.max(0,fi-1)*cw,x1=W-R,yt=py(+crt.fvgTop),yb=py(+crt.fvgBottom);
+   ctx.save();ctx.fillStyle='rgba(245,196,78,.10)';ctx.strokeStyle='#f5c44e';ctx.lineWidth=1.5;ctx.fillRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.strokeRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.fillStyle='#f5c44e';ctx.font='bold 11px Arial';ctx.fillText('FVG REACTION ZONE',Math.min(W-125,Math.max(L+4,x0+4)),Math.max(T+12,Math.min(yt,yb)-5));
+   if(crt.reactionCandle){const ri=v.findIndex(x=>+x.time===+crt.reactionCandle.time);if(ri>=0){const rx=L+ri*cw+cw/2,ry=py(+crt.reactionPrice);ctx.fillStyle='#49e28b';ctx.beginPath();ctx.arc(rx,ry,5,0,Math.PI*2);ctx.fill();ctx.fillText('REACTION',Math.min(W-70,Math.max(L,rx-30)),Math.max(T+12,ry-10));}}ctx.restore();
+  }
  }
 
  // Mark the exact M5 candle that produced the latest valid liquidity sweep.
@@ -334,7 +358,7 @@ function showCRT(x){
  check('reclaimCheck',x.sweep?('Range reclaim: '+(x.reclaim?'CONFIRMED':'WAIT')):'Range reclaim:',x.reclaim);
  check('structureCheck',x.structure?('Market structure shift: '+x.structureType+' below/above '+fmt(x.structureLevel)):'Market structure shift:',x.structure);
  check('displacementCheck',x.displacement?('Displacement: CONFIRMED'+(x.displacementRatio?' • '+x.displacementRatio.toFixed(2)+'x range':'')):'Displacement:',x.displacement);
- check('fvgCheck',x.fvg?('FVG '+x.fvgType+' • '+fmt(x.fvgSize)):'FVG:',x.fvg);
+ check('fvgCheck',x.fvg?('FVG '+x.fvgType+' • '+fmt(x.fvgSize)+(x.reaction?' • REACTION':' • WAIT REACTION')):'FVG:',x.fvg);
 
  const sweepText=x.sweep
   ? '<br>Liquidity sweep: <strong>'+x.sweepType+'</strong>'
@@ -352,6 +376,7 @@ function showCRT(x){
   +(x.structure?'<br>MSS level: '+fmt(x.structureLevel)+'<br>MSS candle close: '+fmt(x.structureCandle.close):'')
   +(x.displacement?'<br>Displacement candle close: '+fmt(x.displacementCandle.close)+'<br>Displacement strength: '+fmt(x.displacementRatio)+'x average range':'')
   +(x.fvg?'<br>FVG zone: '+fmt(x.fvgBottom)+' — '+fmt(x.fvgTop)+'<br>FVG size: '+fmt(x.fvgSize):'')
+  +(x.fvg?'<br>FVG zone: '+fmt(x.fvgBottom)+' – '+fmt(x.fvgTop)+'<br>FVG reaction: <strong>'+(x.reaction?'CONFIRMED':'WAIT')+'</strong>':'')
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
