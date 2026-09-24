@@ -71,6 +71,19 @@
 <p class="small">Entry, stop, target and R:R are analytical levels only. No orders are placed. Minimum R:R is configurable in this prototype and defaults to 2.0.</p>
 </div>
 
+
+<div class="card result">
+<h2>RoyalScanner Intelligence</h2>
+<div id="intelText" class="yellow">WAIT — calculating H4 bias, session, news and confidence.</div>
+<div class="checks">
+<div id="h4Check" class="check">H4 bias: WAIT</div>
+<div id="sessionCheck" class="check">Session: WAIT</div>
+<div id="newsCheck" class="check">News filter: WAIT</div>
+<div id="confidenceCheck" class="check">Confidence: WAIT</div>
+</div>
+<p class="small">H4 bias and session are derived from the live candle feed. News is marked unknown until a connected economic-calendar feed is available; RoyalScanner does not invent scheduled releases.</p>
+</div>
+
 <div class="card result">
 <h2>Scanner Result</h2>
 <div id="signal" class="signal yellow">WAIT — no confirmed CRT setup.</div>
@@ -328,97 +341,71 @@ function draw(){
  ctx.strokeStyle='#17283d';ctx.lineWidth=1;for(let i=0;i<=5;i++){const y=T+ch*i/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillStyle='#6f829b';ctx.font='10px Arial';ctx.fillText((hi-(hi-lo)*i/5).toFixed(2),5,y+3)}
  v.forEach((c,i)=>{const x=L+i*cw+cw/2,o=py(+c.open),cl=py(+c.close),h=py(+c.high),l=py(+c.low),bull=+c.close>=+c.open;ctx.strokeStyle=ctx.fillStyle=bull?'#49d17d':'#ff5c5c';ctx.beginPath();ctx.moveTo(x,h);ctx.lineTo(x,l);ctx.stroke();ctx.fillRect(x-bw/2,Math.min(o,cl),bw,Math.max(1,Math.abs(cl-o)))});
  if(crt?.reference){const yh=py(+crt.reference.high),yl=py(+crt.reference.low);ctx.strokeStyle='#f5c44e';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(L,yh);ctx.lineTo(W-R,yh);ctx.stroke();ctx.beginPath();ctx.moveTo(L,yl);ctx.lineTo(W-R,yl);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f5c44e';ctx.font='12px Arial';ctx.fillText('CRT HIGH',W-85,yh-5);ctx.fillText('CRT LOW',W-82,yl+15)}
- // Draw the MSS/BOS structure level and mark the candle that closed through it.
- if(crt?.structure && crt.structureLevel!=null){
-  const ys=py(+crt.structureLevel);
-  ctx.save();
-  ctx.strokeStyle='#b98cff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
-  ctx.beginPath();ctx.moveTo(L,ys);ctx.lineTo(W-R,ys);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#b98cff';ctx.font='bold 11px Arial';
-  ctx.fillText('MSS '+fmt(crt.structureLevel),L+5,Math.max(T+12,ys-6));
-  const bi=v.findIndex(x=>+x.time===+(crt.structureCandle?.time));
-  if(bi>=0){
-   const bx=L+bi*cw+cw/2, by=py(crt.direction==='BULLISH'?+v[bi].low:+v[bi].high);
-   ctx.strokeStyle='#b98cff';ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(bx,Math.max(T,by-24));ctx.lineTo(bx,Math.min(H-B,by+24));ctx.stroke();
-   ctx.fillStyle='#b98cff';ctx.beginPath();ctx.arc(bx,by,5,0,Math.PI*2);ctx.fill();
-   ctx.font='bold 11px Arial';ctx.fillText('MSS',Math.min(W-45,Math.max(L,bx-15)),crt.direction==='BULLISH'?Math.max(T+12,by-28):Math.min(H-B-4,by+36));
-  }
-  ctx.restore();
- }
-
- // Draw the FVG reaction zone.
- if(crt?.fvg && crt.fvgTop!=null && crt.fvgBottom!=null && crt.fvgCandle){
-  const fi=v.findIndex(x=>+x.time===+crt.fvgCandle.time);
-  if(fi>=0){
-   const x0=L+Math.max(0,fi-1)*cw,x1=W-R,yt=py(+crt.fvgTop),yb=py(+crt.fvgBottom);
-   ctx.save();ctx.fillStyle='rgba(245,196,78,.10)';ctx.strokeStyle='#f5c44e';ctx.lineWidth=1.5;ctx.fillRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.strokeRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.fillStyle='#f5c44e';ctx.font='bold 11px Arial';ctx.fillText('FVG REACTION ZONE',Math.min(W-125,Math.max(L+4,x0+4)),Math.max(T+12,Math.min(yt,yb)-5));
-   if(crt.reactionCandle){const ri=v.findIndex(x=>+x.time===+crt.reactionCandle.time);if(ri>=0){const rx=L+ri*cw+cw/2,ry=py(+crt.reactionPrice);ctx.fillStyle='#49e28b';ctx.beginPath();ctx.arc(rx,ry,5,0,Math.PI*2);ctx.fill();ctx.fillText('REACTION',Math.min(W-70,Math.max(L,rx-30)),Math.max(T+12,ry-10));}}ctx.restore();
-  }
- }
-
- // Mark the exact M5 candle that produced the latest valid liquidity sweep.
- if(crt?.sweep){
-  const idx=v.findIndex(x=>+x.time===+crt.sweep.time);
-  if(idx>=0){
-   const x=L+idx*cw+cw/2;
-   const bullish=crt.direction==='BULLISH';
-   const y=bullish?py(+crt.sweep.low):py(+crt.sweep.high);
-   ctx.save();
-   ctx.strokeStyle=bullish?'#49e28b':'#ff7070';
-   ctx.fillStyle=bullish?'#49e28b':'#ff7070';
-   ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(x,Math.max(T,y-28));ctx.lineTo(x,Math.min(H-B,y+28));ctx.stroke();
-   ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
-   ctx.font='bold 11px Arial';
-   ctx.fillText(bullish?'SWEEP LOW':'SWEEP HIGH',Math.min(W-92,Math.max(L,x-42)),bullish?Math.max(T+12,y-34):Math.min(H-B-4,y+40));
-   ctx.restore();
-  }
- }
- // Draw the first fresh FVG zone created after displacement.
- if(crt?.fvg && crt.fvgTop!=null && crt.fvgBottom!=null && crt.fvgCandle){
-  const fi=v.findIndex(x=>+x.time===+crt.fvgCandle.time);
-  if(fi>=0){
-   const x0=L+Math.max(0,fi-1)*cw;
-   const x1=W-R;
-   const yt=py(+crt.fvgTop), yb=py(+crt.fvgBottom);
-   ctx.save();
-   ctx.fillStyle=crt.fvgType==='BULLISH'?'rgba(73,226,139,.12)':'rgba(255,112,112,.12)';
-   ctx.strokeStyle=crt.fvgType==='BULLISH'?'#49e28b':'#ff7070';
-   ctx.lineWidth=1.5;
-   ctx.fillRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));
-   ctx.strokeRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));
-   ctx.fillStyle=crt.fvgType==='BULLISH'?'#49e28b':'#ff7070';
-   ctx.font='bold 11px Arial';
-   ctx.fillText('FVG '+crt.fvgType,Math.min(W-90,Math.max(L+4,x0+4)),Math.max(T+12,Math.min(yt,yb)-5));
-   ctx.restore();
-  }
- }
-
- // Mark the confirmed displacement candle after MSS.
- if(crt?.displacement && crt.displacementCandle){
-  const di=v.findIndex(x=>+x.time===+crt.displacementCandle.time);
-  if(di>=0){
-   const x=L+di*cw+cw/2;
-   const y=crt.direction==='BULLISH'?py(+crt.displacementCandle.low):py(+crt.displacementCandle.high);
-   ctx.save();
-   ctx.fillStyle='#f5c44e';
-   ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
-   ctx.font='bold 11px Arial';
-   ctx.fillText('DISPLACEMENT',Math.min(W-105,Math.max(L,x-50)),crt.direction==='BULLISH'?Math.max(T+12,y-12):Math.min(H-B-4,y+25));
-   ctx.restore();
-  }
- }
- ctx.fillStyle='#6f829b';ctx.font='10px Arial';if(v[0]?.time)ctx.fillText(new Date(+v[0].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),L,H-8);if(v[v.length-1]?.time)ctx.fillText(new Date(+v[v.length-1].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),W-70,H-8)
+ if(crt?.sweep){const si=v.findIndex(x=>+x.time===+crt.sweep.time);if(si>=0){const sx=L+si*cw+cw/2,sy=py(+crt.sweepPrice);ctx.fillStyle='#ff9f43';ctx.beginPath();ctx.arc(sx,sy,5,0,Math.PI*2);ctx.fill();ctx.font='bold 10px Arial';ctx.fillText('SWEEP',Math.min(W-55,Math.max(L,sx-18)),crt.direction==='BULLISH'?Math.max(T+12,sy-10):Math.min(H-B-4,sy+18))}}
+ if(crt?.structure&&crt.structureLevel!=null){const ys=py(+crt.structureLevel);ctx.save();ctx.strokeStyle='#b98cff';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(L,ys);ctx.lineTo(W-R,ys);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#b98cff';ctx.font='bold 11px Arial';ctx.fillText('MSS '+fmt(crt.structureLevel),L+5,Math.max(T+12,ys-6));const bi=v.findIndex(x=>+x.time===+(crt.structureCandle?.time));if(bi>=0){const bx=L+bi*cw+cw/2,by=py(crt.direction==='BULLISH'?+v[bi].low:+v[bi].high);ctx.fillStyle='#b98cff';ctx.beginPath();ctx.arc(bx,by,5,0,Math.PI*2);ctx.fill();ctx.font='bold 11px Arial';ctx.fillText('MSS',Math.min(W-45,Math.max(L,bx-15)),crt.direction==='BULLISH'?Math.max(T+12,by-25):Math.min(H-B-4,by+25))}ctx.restore()}
+ if(crt?.fvg&&crt.fvgTop!=null&&crt.fvgBottom!=null&&crt.fvgCandle){const fi=v.findIndex(x=>+x.time===+crt.fvgCandle.time);if(fi>=0){const x0=L+Math.max(0,fi-1)*cw,x1=W-R,yt=py(+crt.fvgTop),yb=py(+crt.fvgBottom);ctx.save();ctx.fillStyle='rgba(245,196,78,.10)';ctx.strokeStyle='#f5c44e';ctx.fillRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.strokeRect(x0,Math.min(yt,yb),Math.max(1,x1-x0),Math.abs(yb-yt));ctx.fillStyle='#f5c44e';ctx.font='bold 10px Arial';ctx.fillText('FVG',Math.max(L+4,x0+4),Math.max(T+12,Math.min(yt,yb)-5));if(crt.reactionCandle){const ri=v.findIndex(x=>+x.time===+crt.reactionCandle.time);if(ri>=0){const rx=L+ri*cw+cw/2,ry=py(+crt.reactionPrice);ctx.fillStyle='#49e28b';ctx.beginPath();ctx.arc(rx,ry,5,0,Math.PI*2);ctx.fill();ctx.fillText('REACTION',Math.min(W-70,rx+5),ry-7)}}ctx.restore()}}
+ if(crt?.displacement&&crt.displacementCandle){const di=v.findIndex(x=>+x.time===+crt.displacementCandle.time);if(di>=0){const dx=L+di*cw+cw/2,dy=py(crt.direction==='BULLISH'?+crt.displacementCandle.low:+crt.displacementCandle.high);ctx.fillStyle='#f5c44e';ctx.beginPath();ctx.arc(dx,dy,5,0,Math.PI*2);ctx.fill();ctx.font='bold 10px Arial';ctx.fillText('DISPLACEMENT',Math.min(W-105,Math.max(L,dx-50)),crt.direction==='BULLISH'?Math.max(T+12,dy-12):Math.min(H-B-4,dy+25))}}
+ if(crt?.entry){const levels=[['ENTRY',crt.entryPrice,'#49e28b'],['STOP',crt.stop,'#ff5c5c'],['TARGET',crt.target,'#f5c44e']];levels.forEach(([label,price,color])=>{if(price==null)return;const y=py(+price);ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=color;ctx.font='bold 10px Arial';ctx.fillText(label+' '+fmt(price),L+5,Math.max(T+11,Math.min(H-B-4,y-5)));ctx.restore()})}
+ ctx.fillStyle='#6f829b';ctx.font='10px Arial';if(v[0]?.time)ctx.fillText(new Date(+v[0].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),L,H-8);if(v[v.length-1]?.time)ctx.fillText(new Date(+v[v.length-1].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),W-70,H-8);
 }
 
 function check(id,text,ok){$(id).textContent=text+(ok?' ✓':' — WAIT');$(id).className='check '+(ok?'green':'yellow')}
+function getH4Bias(h4){
+ h4=(h4||[]).filter(valid);
+ if(h4.length<5) return {bias:'UNKNOWN',strength:0,reason:'Not enough H4 history.'};
+ const c=h4.slice(0,-1);
+ const a=c[c.length-1], b=c[c.length-2], c3=c[c.length-3];
+ const close=+a.close, prev=+b.close, prev2=+c3.close;
+ const hh=+a.high>+b.high && +b.high>+c3.high;
+ const ll=+a.low<+b.low && +b.low<+c3.low;
+ const bullish=(close>prev && prev>prev2) || hh;
+ const bearish=(close<prev && prev<prev2) || ll;
+ if(bullish&&!bearish) return {bias:'BULLISH',strength:2,reason:'H4 closes/structure are rising.'};
+ if(bearish&&!bullish) return {bias:'BEARISH',strength:2,reason:'H4 closes/structure are falling.'};
+ return {bias:'NEUTRAL',strength:0,reason:'H4 structure is mixed.'};
+}
+function getSession(ts){
+ const hour=Number(new Date(+ts*1000).toLocaleString('en-ZA',{timeZone:'Africa/Johannesburg',hour:'2-digit',hour12:false}));
+ if(hour>=0&&hour<7) return {name:'ASIA',active:true};
+ if(hour>=7&&hour<10) return {name:'LONDON OPEN',active:true};
+ if(hour>=10&&hour<15) return {name:'LONDON',active:true};
+ if(hour>=15&&hour<18) return {name:'LONDON / NEW YORK OVERLAP',active:true};
+ if(hour>=18&&hour<22) return {name:'NEW YORK',active:true};
+ return {name:'OFF-SESSION',active:false};
+}
+function getIntelligence(x,h4,ts){
+ const hb=getH4Bias(h4), session=getSession(ts||Date.now()/1000);
+ let score=0, max=0, reasons=[];
+ const add=(ok,pts,label)=>{max+=pts;if(ok){score+=pts;reasons.push(label)}};
+ add(!!x.reclaim,10,'CRT reclaim');
+ add(!!x.structure,10,'MSS');
+ add(!!x.displacement,10,'Displacement');
+ add(!!x.fvg,10,'FVG');
+ add(!!x.reaction,10,'FVG reaction');
+ add(!!x.method714?.aligned,10,'714 alignment');
+ add(!!x.entry,10,'M5 entry');
+ add(!!(x.rr>=2),10,'R:R ≥ 2');
+ add((x.direction==='BULLISH'&&hb.bias==='BULLISH')||(x.direction==='BEARISH'&&hb.bias==='BEARISH'),15,'H4 alignment');
+ add(session.active,5,'Active session');
+ const news={status:'UNKNOWN',penalty:0,note:'Economic-calendar feed not connected'};
+ const confidence=Math.round(score/max*100);
+ return {h4:hb,session,news,confidence,score,max,reasons};
+}
+
 function showCRT(x){
  if(!x?.reference){
   $('resultText').textContent='WAIT — insufficient candle history for CRT detection.';
   return;
  }
  const r=x.reference;
+ const intel=getIntelligence(x,window.__H4||[],x.reactionCandle?.time||r.time);
+ window.__intel=intel;
+ check('h4Check','H4 bias: '+intel.h4.bias,intel.h4.bias!=='UNKNOWN');
+ check('sessionCheck','Session: '+intel.session.name,intel.session.active);
+ check('newsCheck','News filter: UNKNOWN — feed not connected',false);
+ check('confidenceCheck','Confidence: '+intel.confidence+'/100',intel.confidence>=70);
+ $('intelText').innerHTML='<strong>INTELLIGENCE SUMMARY</strong><br>H4 bias: <strong>'+intel.h4.bias+'</strong><br>Session: <strong>'+intel.session.name+'</strong><br>News: <strong>UNKNOWN</strong><br>Confidence: <strong>'+intel.confidence+'/100</strong><br><span class="small">'+intel.h4.reason+' News scoring is withheld until an economic-calendar feed is connected.</span>';
+
  check('rangeCheck','CRT range: '+fmt(r.high)+' / '+fmt(r.low),true);
  check('sweepCheck',x.sweep?('Liquidity sweep: '+x.sweepType+' @ '+fmt(x.sweepPrice)):'Liquidity sweep:',!!x.sweep);
  check('reclaimCheck',x.sweep?('Range reclaim: '+(x.reclaim?'CONFIRMED':'WAIT')):'Range reclaim:',x.reclaim);
@@ -470,7 +457,7 @@ function showCRT(x){
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
- if(x.status==='CONFIRMED' && x.method714?.aligned && x.entry && x.rr>=2){
+ if(x.status==='CONFIRMED' && x.method714?.aligned && x.entry && x.rr>=2 && window.__intel?.confidence>=70){
   $('signal').textContent=x.direction+' CRT + 714 + M5 CONFIRMED';
   $('signal').className='signal green';
   $('signalNote').textContent='CRT, 714, M5 entry and minimum 2.0R conditions detected. Analysis only.';
@@ -498,7 +485,7 @@ async function load(){
  const mode=$('mode').value,market=$('market').value,tf=$('tf').value;$('title').textContent=names[market]+' • '+tf+' • '+(mode==='real'?'LIVE':'DEMO');
  if(mode==='demo'){candles=[];crt=null;$('status').textContent='● Demo Market';$('status').className='status wait';draw();return}
  try{const r=await fetch(API+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json(),d=j?.data?.[market];if(!d)throw Error('No symbol data received');
- $('status').innerHTML='● <span class="live">LIVE MT5 FEED CONNECTED</span> — real OHLC candles received.';$('feed').textContent='MT5 symbol: '+d.symbol+' • Updated '+(j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE');$('updated').textContent=j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE';$('bid').textContent=fmt(d.bid);$('ask').textContent=fmt(d.ask);$('spread').textContent=fmt(+d.ask-+d.bid);candles=d?.timeframes?.[tf]||[];$('count').textContent=candles.length;crt=detectCRT(d?.timeframes?.H1||[],d?.timeframes?.M5||[]);draw();showCRT(crt)
+ $('status').innerHTML='● <span class="live">LIVE MT5 FEED CONNECTED</span> — real OHLC candles received.';$('feed').textContent='MT5 symbol: '+d.symbol+' • Updated '+(j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE');$('updated').textContent=j.data.updated?new Date(j.data.updated).toLocaleTimeString():'LIVE';$('bid').textContent=fmt(d.bid);$('ask').textContent=fmt(d.ask);$('spread').textContent=fmt(+d.ask-+d.bid);candles=d?.timeframes?.[tf]||[];$('count').textContent=candles.length;window.__H4=d?.timeframes?.H4||[];crt=detectCRT(d?.timeframes?.H1||[],d?.timeframes?.M5||[]);draw();showCRT(crt)
  }catch(e){$('status').innerHTML='<span class="offline">● LIVE FEED ERROR</span> — '+e.message;draw()}
 }
 
