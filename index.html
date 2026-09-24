@@ -71,7 +71,7 @@ window.addEventListener('resize',resize);
 function detectCRT(h1,m5){
  const out={
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
-  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,fvg:false,fvgType:null,
+  structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -160,19 +160,38 @@ function detectCRT(h1,m5){
   out.structureType=structure.type;
  }
 
- // Displacement: directional candle body is at least 1.5x the average
- // range of up to the previous 10 M5 candles.
- const base=after.slice(Math.max(0,si-10),si)
-  .map(x=>+x.high-+x.low).filter(x=>x>0);
- const avg=base.length?base.reduce((a,b)=>a+b,0)/base.length:0;
- for(const x of post.slice(0,12)){
-  const body=Math.abs(+x.close-+x.open);
-  const bull=+x.close>+x.open;
-  const bear=+x.close<+x.open;
-  if(avg && body>=avg*1.5 && ((out.direction==='BULLISH'&&bull)||(out.direction==='BEARISH'&&bear))){
-   out.displacement=true;
-   break;
+ // Displacement: after MSS, require a strong directional M5 candle.
+ // The candle body must be >= 1.5x the average range of the preceding
+ // completed M5 candles and should close beyond the MSS level. We also
+ // require the body to occupy at least 60% of the candle's full range so
+ // a long-wick candle is not treated as displacement.
+ let displacement=null;
+ if(out.structure && out.structureCandle){
+  const mssIndex=after.findIndex(x=>+x.time===+out.structureCandle.time);
+  if(mssIndex>=0){
+   for(let i=mssIndex+1;i<after.length;i++){
+    const x=after[i];
+    const range=+x.high-+x.low;
+    const body=Math.abs(+x.close-+x.open);
+    if(!(range>0&&body>0)) continue;
+    const lookback=after.slice(Math.max(0,i-10),i).map(c=>+c.high-+c.low).filter(r=>r>0);
+    const avgRange=lookback.length ? lookback.reduce((a,b)=>a+b,0)/lookback.length : 0;
+    const ratio=avgRange?body/avgRange:0;
+    const bodyShare=body/range;
+    const bull=+x.close>+x.open, bear=+x.close<+x.open;
+    const directional=(out.direction==='BULLISH'&&bull)||(out.direction==='BEARISH'&&bear);
+    const beyondMSS=out.direction==='BULLISH' ? +x.close>+out.structureLevel : +x.close<+out.structureLevel;
+    if(avgRange && directional && ratio>=1.5 && bodyShare>=0.60 && beyondMSS){
+      displacement={candle:x,ratio,bodyShare};
+      break;
+    }
+   }
   }
+ }
+ if(displacement){
+  out.displacement=true;
+  out.displacementCandle=displacement.candle;
+  out.displacementRatio=displacement.ratio;
  }
 
  // FVG: three-candle imbalance after the sweep.
@@ -196,9 +215,10 @@ function detectCRT(h1,m5){
   out.reason=out.direction+' CRT setup confirmed: sweep + reclaim + structure shift + displacement + FVG.';
  }else if(n>=2){
   out.status='DEVELOPING';
-  out.reason=out.direction+' CRT setup developing. MSS detected; displacement and FVG confirmation are still required.';
+  out.reason=out.direction+' CRT setup developing. MSS detected; waiting for displacement and FVG confirmation.';
  }else{
-  out.reason=out.direction+' liquidity sweep detected. Waiting for stronger confirmation.';
+  if(out.structure) out.reason=out.direction+' MSS confirmed. Waiting for displacement and FVG confirmation.';
+  else out.reason=out.direction+' liquidity sweep detected. Waiting for MSS confirmation.';
  }
  return out;
 }
@@ -248,6 +268,20 @@ function draw(){
    ctx.restore();
   }
  }
+ // Mark the confirmed displacement candle after MSS.
+ if(crt?.displacement && crt.displacementCandle){
+  const di=v.findIndex(x=>+x.time===+crt.displacementCandle.time);
+  if(di>=0){
+   const x=L+di*cw+cw/2;
+   const y=crt.direction==='BULLISH'?py(+crt.displacementCandle.low):py(+crt.displacementCandle.high);
+   ctx.save();
+   ctx.fillStyle='#f5c44e';
+   ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+   ctx.font='bold 11px Arial';
+   ctx.fillText('DISPLACEMENT',Math.min(W-105,Math.max(L,x-50)),crt.direction==='BULLISH'?Math.max(T+12,y-12):Math.min(H-B-4,y+25));
+   ctx.restore();
+  }
+ }
  ctx.fillStyle='#6f829b';ctx.font='10px Arial';if(v[0]?.time)ctx.fillText(new Date(+v[0].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),L,H-8);if(v[v.length-1]?.time)ctx.fillText(new Date(+v[v.length-1].time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),W-70,H-8)
 }
 
@@ -262,7 +296,7 @@ function showCRT(x){
  check('sweepCheck',x.sweep?('Liquidity sweep: '+x.sweepType+' @ '+fmt(x.sweepPrice)):'Liquidity sweep:',!!x.sweep);
  check('reclaimCheck',x.sweep?('Range reclaim: '+(x.reclaim?'CONFIRMED':'WAIT')):'Range reclaim:',x.reclaim);
  check('structureCheck',x.structure?('Market structure shift: '+x.structureType+' below/above '+fmt(x.structureLevel)):'Market structure shift:',x.structure);
- check('displacementCheck','Displacement:',x.displacement);
+ check('displacementCheck',x.displacement?('Displacement: CONFIRMED'+(x.displacementRatio?' • '+x.displacementRatio.toFixed(2)+'x range':'')):'Displacement:',x.displacement);
  check('fvgCheck','FVG'+(x.fvgType?' '+x.fvgType:''),x.fvg);
 
  const sweepText=x.sweep
@@ -279,6 +313,7 @@ function showCRT(x){
   +sweepText
   +'<br><br>Direction hypothesis: '+(x.direction||'NONE')
   +(x.structure?'<br>MSS level: '+fmt(x.structureLevel)+'<br>MSS candle close: '+fmt(x.structureCandle.close):'')
+  +(x.displacement?'<br>Displacement candle close: '+fmt(x.displacementCandle.close)+'<br>Displacement strength: '+fmt(x.displacementRatio)+'x average range':'')
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
