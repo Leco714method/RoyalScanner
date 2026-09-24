@@ -59,6 +59,19 @@
 </div>
 
 <div class="card result">
+<h2>Entry Confirmation & Risk</h2>
+<div id="entryText" class="yellow">WAIT — calculating M5 entry conditions.</div>
+<div class="checks">
+<div id="entryCheck" class="check">M5 entry confirmation: WAIT</div>
+<div id="pdCheck" class="check">Premium/discount: WAIT</div>
+<div id="slCheck" class="check">Stop level: WAIT</div>
+<div id="tpCheck" class="check">Target: WAIT</div>
+<div id="rrCheck" class="check">Risk/reward: WAIT</div>
+</div>
+<p class="small">Entry, stop, target and R:R are analytical levels only. No orders are placed. Minimum R:R is configurable in this prototype and defaults to 2.0.</p>
+</div>
+
+<div class="card result">
 <h2>Scanner Result</h2>
 <div id="signal" class="signal yellow">WAIT — no confirmed CRT setup.</div>
 <p id="signalNote" class="small">Waiting for CRT confirmation.</p>
@@ -84,6 +97,7 @@ function detectCRT(h1,m5){
   status:'WAIT',direction:null,reference:null,sweep:null,reclaim:false,
   structure:false,structureLevel:null,structureCandle:null,structureType:null,displacement:false,displacementCandle:null,displacementRatio:null,fvg:false,fvgType:null,fvgTop:null,fvgBottom:null,fvgCandle:null,fvgSize:null,reaction:false,reactionCandle:null,reactionPrice:null,
   method714:null,
+  entry:false,entryPrice:null,entryCandle:null,premiumDiscount:null,midpoint:null,stop:null,target:null,rr:null,
   sweepType:null,sweepPrice:null,penetration:null,
   reason:'Waiting for a liquidity sweep.'
  };
@@ -268,6 +282,27 @@ function detectCRT(h1,m5){
   out.method714={hour:hourNum(w714.time),candle:w714,direction:priceDir,aligned};
  }
 
+ // M5 entry confirmation + premium/discount + risk model.
+ // Confirmation is a directional rejection candle after the FVG reaction.
+ if(out.reaction && out.reactionCandle && out.method714?.aligned){
+  const ri=after.findIndex(x=>+x.time===+out.reactionCandle.time);
+  for(let i=ri+1;i<after.length;i++){
+   const c=after[i],o=+c.open,h=+c.high,l=+c.low,cl=+c.close;
+   const bullish=out.direction==='BULLISH' && cl>o;
+   const bearish=out.direction==='BEARISH' && cl<o;
+   if(!bullish && !bearish) continue;
+   const mid=(hi+lo)/2;
+   const pd=(out.direction==='BULLISH' && cl<=mid)?'DISCOUNT':(out.direction==='BEARISH' && cl>=mid)?'PREMIUM':'OPPOSITE_HALF';
+   if(pd==='OPPOSITE_HALF') continue;
+   const stop=out.direction==='BULLISH' ? Math.min(lo,out.sweepPrice) : Math.max(hi,out.sweepPrice);
+   const target=out.direction==='BULLISH' ? hi : lo;
+   const risk=Math.abs(cl-stop),reward=Math.abs(target-cl);
+   const rr=risk>0?reward/risk:0;
+   out.entry=true;out.entryPrice=cl;out.entryCandle=c;out.premiumDiscount=pd;out.midpoint=mid;out.stop=stop;out.target=target;out.rr=rr;
+   break;
+  }
+ }
+
  const n=[out.reclaim,out.structure,out.displacement,out.fvg,out.reaction].filter(Boolean).length;
  if(out.reclaim&&out.structure&&out.displacement&&out.fvg&&out.reaction){
   out.status='CONFIRMED';
@@ -402,6 +437,19 @@ function showCRT(x){
   $('714Window').textContent='714 window: WAIT';$('714Direction').textContent='714 direction: WAIT';$('714Alignment').textContent='CRT + 714 alignment: WAIT';$('714Text').textContent='WAIT — no completed configured 714 observation candle is available yet.';
  }
 
+ if(x.entry){
+  const rrOk=x.rr>=2;
+  check('entryCheck','M5 entry confirmation: '+fmt(x.entryPrice),true);
+  check('pdCheck','Premium/discount: '+x.premiumDiscount+' (mid '+fmt(x.midpoint)+')',true);
+  check('slCheck','Stop level: '+fmt(x.stop),true);
+  check('tpCheck','Target: '+fmt(x.target),true);
+  check('rrCheck','Risk/reward: '+x.rr.toFixed(2)+'R',rrOk);
+  $('entryText').innerHTML='<strong>M5 ENTRY CONFIRMATION</strong><br>Entry: <strong>'+fmt(x.entryPrice)+'</strong><br>Zone: <strong>'+x.premiumDiscount+'</strong><br>Stop: <strong>'+fmt(x.stop)+'</strong><br>Target: <strong>'+fmt(x.target)+'</strong><br>R:R: <strong>'+x.rr.toFixed(2)+'R</strong>'+(rrOk?'':'<br><span class="small">R:R is below the 2.0 prototype threshold.</span>');
+ }else{
+  $('entryText').textContent=x.method714?.aligned?'WAIT — waiting for M5 entry confirmation after the 714-aligned FVG reaction.':'WAIT — M5 entry confirmation requires CRT + 714 alignment first.';
+  check('entryCheck','M5 entry confirmation:',false);check('pdCheck','Premium/discount:',false);check('slCheck','Stop level:',false);check('tpCheck','Target:',false);check('rrCheck','Risk/reward:',false);
+ }
+
  const sweepText=x.sweep
   ? '<br>Liquidity sweep: <strong>'+x.sweepType+'</strong>'
     +'<br>Sweep price: '+fmt(x.sweepPrice)
@@ -422,10 +470,10 @@ function showCRT(x){
   +'<br>Status: <strong>'+x.status+'</strong>'
   +'<br><br><span class="small">'+x.reason+'</span>';
 
- if(x.status==='CONFIRMED' && x.method714?.aligned){
-  $('signal').textContent=x.direction+' CRT + 714 ALIGNED';
+ if(x.status==='CONFIRMED' && x.method714?.aligned && x.entry && x.rr>=2){
+  $('signal').textContent=x.direction+' CRT + 714 + M5 CONFIRMED';
   $('signal').className='signal green';
-  $('signalNote').textContent='All initial CRT confirmation conditions detected. This is analysis only.';
+  $('signalNote').textContent='CRT, 714, M5 entry and minimum 2.0R conditions detected. Analysis only.';
  }else if(x.status==='CONFIRMED'){
   $('signal').textContent=x.direction+' CRT CONFIRMED — 714 WAIT/NOT ALIGNED';
   $('signal').className='signal yellow';
